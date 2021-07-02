@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+
+import sys
+from math import sqrt, pow
+
+
+def usage():
+    print("Bollinger Bands\n")
+    print("USAGE")
+    print("\t./ bollinger [-h] period standard_dev indexes_file index_number\n")
+    print("\tperiod\t\tnumber of indexes for the moving average")
+    print("\tstandard_dev\tstandard deviation coefficient to apply")
+    print("\tindexes_file\tfile containing daily indexes")
+    print("\tindex_number\tindex number to compute moving average and Bollinger bands")
+    print("OPTIONS\n\t-h\t\tprint the usage and quit.")
+    sys.exit(0)
+
+
+def get_file():
+    try:
+        lines = {}
+        with open(sys.argv[3]) as f:
+            for i, line in enumerate(f):
+                lines[i] = float(line)
+    except IOError:
+        sys.stderr.write("Error:\n\tCan't open file \"")
+        sys.stderr.write(sys.argv[1])
+        sys.stderr.write("\".\n")
+        sys.exit(84)
+    return lines
+
+
+def med_average(index, period, lines):
+    cnt = (index - period + 1)
+    res = 0.0
+    try:
+        while cnt < (index + 1):
+            res += lines[cnt]
+            cnt += 1
+    except IndexError:
+        sys.stderr.write("Error:\n")
+        sys.stderr.write("\tIndex out of range.\n")
+        sys.exit(84)
+    res = res / ((index + 1) - (index - period + 1))
+    print("MA: %.2f" % res)
+    return res
+
+
+def stand_dev(index, period, lines, MA):
+    cnt = (index - period + 1)
+    res = 0.0
+    while cnt < (index + 1):
+        res += pow((lines[cnt] - MA), 2)
+        cnt += 1
+    res = res * 1 / period
+    res = sqrt(res)
+    print("SD: %.2f" % res)
+    return res
+
+
+def limit(MA, SD, coef):
+    bplus = MA + (SD * coef)
+    bmoins = MA - (SD * coef)
+    print("B+: %.2f" % bplus)
+    print("B-: %.2f" % bmoins)
+
+
+def input():
+    try:
+        index = int(sys.argv[4])
+        period = int(sys.argv[1])
+        coef = float(sys.argv[2])
+    except ValueError:
+        sys.stderr.write("Error:\n")
+        sys.stderr.write("\tNeed a number for the period, the standard_dev and the index_number\n")
+        sys.exit(84)
+    print("Index:", index)
+    print("Period:", period)
+    print("SD_coef: %.2f" % coef)
+    return index, period, coef
+
+
+def output(index, period, coef, lines):
+    MA = med_average(index, period, lines)
+    SD = stand_dev(index, period, lines, MA)
+    limit(MA, SD, coef)
+
+
+def boll(lines):
+    print("INPUT")
+    index, period, coef = input()
+    print("\nOUTPUT")
+    output(index, period, coef, lines)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2 or sys.argv[1] == "-h":
+        usage()
+    elif len(sys.argv) != 5:
+        print("Error: wrong argument. See \'-h\' for more information.")
+        sys.exit(84)
+    lines = get_file()
+    boll(lines)
+    sys.exit(0)
